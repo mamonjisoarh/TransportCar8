@@ -5,7 +5,7 @@
     var isBusy = false; // vrai pendant le traitement d'un scan (évite les doublons)
     var isRunning = false; // vrai tant que la caméra scanne activement
     var selectedMode = 'entree';
-    var API_URL = (typeof window !== 'undefined' && window.API_URL) || 'https://script.google.com/macros/s/AKfycbwT0e0CxQDuTUFaXTjnMJ6Dy2aglSGYwQBUgIiV-sEWwGhZs_gn0M3cPuS2aIJqKnmv-A/exec';
+    var API_URL = (typeof window !== 'undefined' && window.API_URL) || '';
     var config = { fps: 12, qrbox: { width: 250, height: 250 } };
 
     function setMode(mode) {
@@ -119,6 +119,17 @@
         if (info) info.hidden = false;
     }
 
+    // Le QR est généré au format "| MATRICULE | NOM |" (pipe en tête et en fin).
+    // On découpe par "|", on retire les segments vides/espaces, et on garde le premier
+    // segment non vide restant — c'est le matricule, quel que soit le nombre de pipes.
+    function extraireMatricule(decodedText) {
+        var texte = (decodedText || '').toString();
+        var segments = texte.split('|')
+            .map(function (s) { return s.trim(); })
+            .filter(function (s) { return s !== ''; });
+        return segments.length ? segments[0] : texte.trim();
+    }
+
     function onScanSuccess(decodedText) {
         if (isBusy) return; // ignore les détections répétées pendant le traitement en cours
         isBusy = true;
@@ -126,7 +137,7 @@
         try { html5QrCode.pause(true); } catch (e) {}
         updateStatus('Scan détecté…');
 
-        var matricule = (decodedText || '').toString().split('|')[0].trim() || (decodedText || '').toString().trim();
+        var matricule = extraireMatricule(decodedText);
         traiterMatricule(matricule, reprendreScanApresDelai);
     }
 
